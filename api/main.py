@@ -32,12 +32,13 @@ def get_user_by_email(db: Session, email: str) -> Optional[models.User]:
 
 def create_user(db: Session, user_data: schemas.UserCreate) -> schemas.UserNormal:
     hashed_password = pwd_context.hash (user_data.password)
-    db_user = schemas.User(
+    db_user = models.User(
         email=user_data.email,
         lname=user_data.lname,
         fname=user_data.fname,
         password=hashed_password,
     )
+
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
@@ -80,16 +81,23 @@ def update_todo(db: Session, id: int, current_user: models.User, todo_data: sche
    	                    detail="object not found")
 
    if not todo.owner  == current_user:
-    raise HTTPException(status_code=401, detail="operation not allowed")
-    
+    raise HTTPException(status_code=401, detail="permission denied: operation not allowed")
+
    todo.text = todo_data.text
    todo.completed = todo_data.completed
    db.commit()
    db.refresh(todo)
    return todo
 
-def delete_todo(db: Session, id: int):
-   todo = db.query(schemas.TODO).filter(schemas.TODO.id == id).first()
+def delete_todo(db: Session, current_user: models.User,  id: int):
+   todo = db.query(models.TODO).filter(models.TODO.id == id).first()
+
+   if todo == None:
+    raise HTTPException(status_code=404,
+   	                    detail="object not found")
+   if not todo.owner  == current_user:
+    raise HTTPException(status_code=401, detail="permission denied: operation not allowed")                    
+   
    db.delete(todo)
    db.commit()
 
@@ -98,7 +106,7 @@ def get_user_todos(db: Session, userid: int):
 
 
 @app.get("/api/mytodos", response_model=List[schemas.TODONormal])
-def get_own_todos(current_user: models.User = Depends(get_current_user),
+async def get_own_todos(current_user: models.User = Depends(get_current_user),
              	db: Session = Depends(get_db)):
    """return a list of TODOs owned by current user"""
    todos = get_user_todos(db, current_user.id)
@@ -110,7 +118,7 @@ def get_own_todos(current_user: models.User = Depends(get_current_user),
    return todo_list
 
 @app.post("/api/todos", response_model=schemas.TODONormal)
-def add_a_todo(todo_data: schemas.TODOCreate,
+async def add_a_todo(todo_data: schemas.TODOCreate,
           	current_user: models.User = Depends(get_current_user),
           	db: Session = Depends(get_db)):
    """add a TODO"""
@@ -118,7 +126,7 @@ def add_a_todo(todo_data: schemas.TODOCreate,
    return schemas.TODONormal(id=todo.id, text=todo.text, completed=todo.completed)
 
 @app.put("/api/todos/{todo_id}", response_model=schemas.TODONormal)
-def update_a_todo(todo_id: int,
+async def update_a_todo(todo_id: int,
              	todo_data: schemas.TODOCreate,
              	current_user: models.User = Depends(get_current_user),
              	db: Session = Depends(get_db)):
@@ -126,6 +134,14 @@ def update_a_todo(todo_id: int,
 #    todo = get_todo(db, todo_id)
    updated_todo = update_todo(db, todo_id, current_user, todo_data)
    return schemas.TODONormal(id=updated_todo.id, text=updated_todo.text, completed=updated_todo.completed ) 
+
+@app.delete("/api/todos/{todo_id}")
+async def delete_a_todo(todo_id: int,
+             	current_user: models.User = Depends(get_current_user),
+             	db: Session = Depends(get_db)):
+   """delete TODO of given id"""
+   delete_todo(db, current_user, todo_id)
+   return {"detail": "TODO Deleted"}
 
 @app.get("/users/all")
 async def all_users(db: Session = Depends(get_db)):
