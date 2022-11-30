@@ -2,9 +2,6 @@ from sqlalchemy import Column, String, Integer, ForeignKey, Boolean, create_engi
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
 
-from pydantic import BaseModel
-from pydantic import EmailStr
-
 
 engine = create_engine(
    'sqlite:///sqlite_db.db', connect_args={'check_same_thread': False})

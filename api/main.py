@@ -38,12 +38,12 @@ def create_user(db: Session, user_data: schemas.UserCreate) -> schemas.UserNorma
         fname=user_data.fname,
         password=hashed_password,
     )
-
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
     signedup_user = schemas.UserNormal(lname= db_user.lname, fname=db_user.fname, email=db_user.email)  
     return signedup_user
+
 
 def get_current_user( db: Session = Depends(get_db), credentials: HTTPBasicCredentials = Depends(security) ):
     valid_credentials = False
@@ -59,6 +59,7 @@ def get_current_user( db: Session = Depends(get_db), credentials: HTTPBasicCrede
             headers={"WWW-Authenticate": "Basic"},
         )
     return user_from_db
+
 
 def get_current_username( db: Session = Depends(get_db), credentials: HTTPBasicCredentials = Depends(security) ):
     current_user = get_current_user(db, credentials)
@@ -143,6 +144,7 @@ async def delete_a_todo(todo_id: int,
    delete_todo(db, current_user, todo_id)
    return {"detail": "TODO Deleted"}
 
+
 @app.get("/users/all")
 async def all_users(db: Session = Depends(get_db)):
     all_users_list = get_all_users(db)
@@ -166,13 +168,5 @@ def signup(user_data: schemas.UserCreate, db: Session = Depends(get_db)):
 
 
 @app.get("/")
-async def root():
-    return {"message": "Hello World"}
-
-
-@app.get("/index")
-async def index():
-    car = {"model": "corolla 2019",
-            "brand": "toyota",
-            "price": 2000000}
-    return car 
+async def api_root():
+    return "Todo api root"

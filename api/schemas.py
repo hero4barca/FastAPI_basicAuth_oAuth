@@ -15,7 +15,6 @@ class UserNormal(BaseModel):
    email: EmailStr
     
 
-
 class TODOCreate(BaseModel):
    text: str
    completed: bool
