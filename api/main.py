@@ -1,6 +1,7 @@
 from fastapi import FastAPI, APIRouter, Depends, HTTPException, status
 import json, os, secrets
-from  . import models as schemas
+from  . import models as models
+from . import schemas as schemas
 from .dependencies import get_db
 from sqlalchemy.orm import  Session
 
@@ -23,13 +24,11 @@ pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
 #    """return user settings for current user"""
 #    return current_user
 
-def get_all_users(db: Session) -> List[schemas.User]:
-    return db.query(schemas.User).filter().all()
+def get_all_users(db: Session) -> List[models.User]:
+    return db.query(models.User).filter().all()
 
-def get_user_by_email(db: Session, email: str) -> Optional[schemas.User]:
-    return db.query(schemas.User).filter(schemas.User.email == email).first()
-
-
+def get_user_by_email(db: Session, email: str) -> Optional[models.User]:
+    return db.query(models.User).filter(models.User.email == email).first()
 
 def create_user(db: Session, user_data: schemas.UserCreate) -> schemas.UserNormal:
     hashed_password = pwd_context.hash (user_data.password)
@@ -45,29 +44,12 @@ def create_user(db: Session, user_data: schemas.UserCreate) -> schemas.UserNorma
     signedup_user = schemas.UserNormal(lname= db_user.lname, fname=db_user.fname, email=db_user.email)  
     return signedup_user
 
-
-def get_current_username( db: Session = Depends(get_db), credentials: HTTPBasicCredentials = Depends(security) ):
+def get_current_user( db: Session = Depends(get_db), credentials: HTTPBasicCredentials = Depends(security) ):
     valid_credentials = False
-    user_from_db = db.query(schemas.User).filter(schemas.User.email == credentials.username).first()
+    user_from_db = db.query(models.User).filter(models.User.email == credentials.username).first()
     
     if not user_from_db == None:
         valid_credentials = pwd_context.verify(credentials.password, user_from_db.password )
- 
-    # print(user_from_db)
-    #current_username_bytes = credentials.username.encode("utf8")
-
-    # correct_username_bytes = b"stanleyjobson"
-
-    # is_correct_username = secrets.compare_digest(
-    #     current_username_bytes, correct_username_bytes
-    # )
-    # current_password_bytes = credentials.password.encode("utf8")
-    # correct_password_bytes = b"swordfish"
-
-    # is_correct_password = secrets.compare_digest(
-    #     current_password_bytes, correct_password_bytes
-    # )
-    #if not (is_correct_username and is_correct_password):
 
     if not valid_credentials:
         raise HTTPException(
@@ -75,14 +57,49 @@ def get_current_username( db: Session = Depends(get_db), credentials: HTTPBasicC
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Basic"},
         )
-    return credentials.username
+    return user_from_db
 
+def get_current_username( db: Session = Depends(get_db), credentials: HTTPBasicCredentials = Depends(security) ):
+    current_user = get_current_user(db, credentials)
+    return current_user.email
+
+def create_todo(db: Session, current_user: models.User, todo_data: schemas.TODOCreate):
+   todo = schemas.TODO(text=todo_data.text,
+                   	completed=todo_data.completed)
+   todo.owner = current_user
+   db.add(todo)
+   db.commit()
+   db.refresh(todo)
+   return todo
+
+def update_todo(db: Session, todo_data: schemas.TODOUpdate):
+   todo = db.query(schemas.TODO).filter(schemas.TODO.id == id).first()
+   todo.text = todo_data.text
+   todo.completed = todo.completed
+   db.commit()
+   db.refresh(todo)
+   return todo
+
+def delete_todo(db: Session, id: int):
+   todo = db.query(schemas.TODO).filter(schemas.TODO.id == id).first()
+   db.delete(todo)
+   db.commit()
+
+def get_user_todos(db: Session, userid: int):
+   return db.query(models.TODO).filter(models.TODO.owner_id == userid).all()
+
+
+@app.get("/api/mytodos", response_model=List[schemas.TODONormal])
+def get_own_todos(current_user: models.User = Depends(get_current_user),
+             	db: Session = Depends(get_db)):
+   """return a list of TODOs owned by current user"""
+   todos = get_user_todos(db, current_user.id)
+   return todos
 
 @app.get("/users/all")
 async def all_users(db: Session = Depends(get_db)):
     all_users_list = get_all_users(db)
     return all_users_list
-
 
 
 @app.get("/users/me")
@@ -111,5 +128,4 @@ async def index():
     car = {"model": "corolla 2019",
             "brand": "toyota",
             "price": 2000000}
-
     return car 
