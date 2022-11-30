@@ -15,14 +15,10 @@ class UserNormal(BaseModel):
    email: EmailStr
     
 
-class TODONormal(BaseModel):
-   text: str
-   completed: bool
-   id: int
 
 class TODOCreate(BaseModel):
    text: str
    completed: bool
 
-class TODOUpdate(TODOCreate):
+class TODONormal(TODOCreate):
    id: int
