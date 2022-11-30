@@ -64,7 +64,7 @@ def get_current_username( db: Session = Depends(get_db), credentials: HTTPBasicC
     return current_user.email
 
 def create_todo(db: Session, current_user: models.User, todo_data: schemas.TODOCreate):
-   todo = schemas.TODO(text=todo_data.text,
+   todo = models.TODO(text=todo_data.text,
                    	completed=todo_data.completed)
    todo.owner = current_user
    db.add(todo)
@@ -94,7 +94,21 @@ def get_own_todos(current_user: models.User = Depends(get_current_user),
              	db: Session = Depends(get_db)):
    """return a list of TODOs owned by current user"""
    todos = get_user_todos(db, current_user.id)
-   return todos
+
+   todo_list = []
+   for todo in todos:
+    todo_list.append(schemas.TODONormal(id=todo.id, text=todo.text, completed=todo.completed)) 
+   
+   return todo_list
+
+@app.post("/api/todos", response_model=schemas.TODONormal)
+def add_a_todo(todo_data: schemas.TODOCreate,
+          	current_user: models.User = Depends(get_current_user),
+          	db: Session = Depends(get_db)):
+   """add a TODO"""
+   todo = create_todo(db, current_user, todo_data)
+   return schemas.TODONormal(id=todo.id, text=todo.text, completed=todo.completed)
+
 
 @app.get("/users/all")
 async def all_users(db: Session = Depends(get_db)):
