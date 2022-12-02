@@ -2,19 +2,49 @@ from fastapi import FastAPI, APIRouter, Depends, HTTPException, status
 from  . import models as models
 from . import schemas as schemas
 from . import crud as crud
-from . import basic_auth as basic_auth
+from . import oauth_auth as oauth
 from .dependencies import get_db
 from sqlalchemy.orm import  Session
+from fastapi.security import  OAuth2PasswordRequestForm
+from . import basic_auth as basic_auth
+from .oauth_auth import oauth2_scheme
+from datetime import datetime, timedelta
 
 from typing import Optional, List
 
 app = FastAPI()
+
 
 def get_all_users(db: Session) -> List[models.User]:
     return db.query(models.User).filter().all()
 
 def get_user_by_email(db: Session, email: str) -> Optional[models.User]:
     return db.query(models.User).filter(models.User.email == email).first()
+
+@app.post("/token", response_model=schemas.Token)
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    user = oauth.authenticate_user( form_data.username, form_data.password, db)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token_expires = timedelta(minutes=oauth.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = oauth.create_access_token(
+        data={"sub": user.username}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
+@app.get("/users/oath_me/")
+async def read_users_me(current_user: schemas.UserOauth = Depends(oauth.get_current_user)):
+    return schemas.UserNormal(lname=current_user.lname, fname=current_user.fname, email=current_user.username) 
+
+
+@app.get("/users/me/items/")
+async def read_own_items(current_user: schemas.UserOauth = Depends(oauth.get_current_user)):
+    return [{"item_id": "Foo", "owner": current_user.username}]
 
 
 @app.get("/api/mytodos", response_model=List[schemas.TODONormal])
