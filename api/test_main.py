@@ -127,6 +127,7 @@ class TestClassSignup:
         assert response_detail[0]['type'] == "value_error.missing"
         assert response_detail[0]['loc'] == ["body","email"]
 
+
     def test_complete(self,client):
         payload = {
             "fname": "test_fname",
@@ -138,6 +139,10 @@ class TestClassSignup:
                                      json=payload,  
                                      )
         assert response.status_code == 200
+        json_response = response.json()
+        assert json_response['lname'] == payload['lname']
+        assert json_response['fname'] == payload['fname']
+        assert json_response['email'] == payload['email']
        
 
 
