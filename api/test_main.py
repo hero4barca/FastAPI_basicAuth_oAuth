@@ -1,4 +1,4 @@
-from .test_config import client, session
+from .conf_test import client, session
 
 def test_api_root(client):
     response = client.get("/")
@@ -17,7 +17,6 @@ class TestClassSignup:
         response = client.post("/api/users", json=payload)
         assert response.status_code == 422
         response_detail = response.json()['detail']
-        # print(response_detail)
         assert response_detail[0]['msg'] == "field required"
         assert response_detail[0]['type'] == "value_error.missing"
         assert response_detail[0]['loc'] == ["body","lname"]
