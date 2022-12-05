@@ -1,4 +1,5 @@
 from .conf_test import client, session
+from requests.auth import HTTPBasicAuth
 
 def test_api_root(client):
     response = client.get("/")
@@ -67,10 +68,27 @@ class TestSignup:
        
 
 class TestUserMe:
+    
+    def setup_class(self):
+        self.payload = {
+            "fname": "test_fname",
+            "lname": "test_lname",
+            "password": "password",
+            "email": 'test_email@example.com'
+        }
 
     def test_unauthenticated_request_returns_error(self, client):
         response = client.get('/users/me')
         assert response.status_code == 401
     
+    def test_authenticated_request_returns_username(self, client):
+        signup_response = client.post("/api/users",json=self.payload )
+        assert signup_response.status_code == 200
+
+        response = client.get('/users/me',  auth = HTTPBasicAuth( self.payload['email'], self.payload['password']) )
+        response.status_code == 200
+        assert response.json()['username'] == self.payload['email']
+
         
+
 
