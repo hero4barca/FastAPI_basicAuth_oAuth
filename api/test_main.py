@@ -6,7 +6,7 @@ def test_api_root(client):
     assert response.json() == "Todo api root"
 
 
-class TestClassSignup:   
+class TestSignup:   
            
     def test_missing_lname_input_returns_error(self, client):
         payload = {
@@ -66,7 +66,11 @@ class TestClassSignup:
         assert json_response['email'] == payload['email']
        
 
+class TestUserMe:
 
+    def test_unauthenticated_request_returns_error(self, client):
+        response = client.get('/users/me')
+        assert response.status_code == 401
     
         
 
