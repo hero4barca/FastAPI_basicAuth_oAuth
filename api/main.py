@@ -37,7 +37,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-@app.get("/users/oath_me/")
+@app.get("/users/oauth_me/")
 async def read_users_me(current_user: schemas.UserOauth = Depends(oauth.get_current_user)):
     return schemas.UserNormal(lname=current_user.lname, fname=current_user.fname, email=current_user.username) 
 

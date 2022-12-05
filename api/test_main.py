@@ -89,6 +89,21 @@ class TestUserMe:
         response.status_code == 200
         assert response.json()['username'] == self.payload['email']
 
+
+class TestOauthUserMe:
+    def setup_class(self):
+        self.payload = {
+            "fname": "test_fname",
+            "lname": "test_lname",
+            "password": "password",
+            "email": 'test_email@example.com'
+        }
+
+    def test_unauthenticated_request_returns_error(self, client):
+        response = client.get('/users/oauth_me')
+        assert response.status_code == 401
+
+
         
 
 
