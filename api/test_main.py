@@ -1,5 +1,6 @@
 from .conf_test import client, session
-from requests.auth import HTTPBasicAuth
+from requests.auth import HTTPBasicAuth 
+from requests.structures import CaseInsensitiveDict
 
 def test_api_root(client):
     response = client.get("/")
@@ -99,9 +100,29 @@ class TestOauthUserMe:
             "email": 'test_email@example.com'
         }
 
+    def get_oauth_token(self, client):
+        token_response = client.post('/token', data={"username": self.payload['email'],
+                                                    "password": self.payload['password'] })
+        return token_response
+
     def test_unauthenticated_request_returns_error(self, client):
         response = client.get('/users/oauth_me')
         assert response.status_code == 401
+
+    def test_authenticated_request_returns_user(self, client):
+        signup_response = client.post("/api/users",json=self.payload )
+        assert signup_response.status_code == 200
+
+        token_response = self.get_oauth_token(client=client)
+        oauth_token = token_response.json()['access_token']
+
+        headers = CaseInsensitiveDict()
+        headers["Accept"] = "application/json"
+        headers["Authorization"] = "Bearer {}".format(oauth_token)  
+
+        response = client.get('/users/oauth_me', headers=headers)
+        assert response.status_code == 200
+
 
 
         
